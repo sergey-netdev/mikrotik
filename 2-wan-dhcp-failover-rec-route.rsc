@@ -21,6 +21,14 @@
 
 # Run the script, check the logs for possible errors.
 
+:if ([:len [/interface bridge port find interface=$wan1IntName]] > 0) do={
+    :error ("Interface '" . $wan1IntName . "' is not expected to be a part of any bridge. If it must, disable the check in the script.")
+}
+:if ([:len [/interface bridge port find interface=$wan2IntName]] > 0) do={
+    :error ("Interface '" . $wan2IntName . "' is not expected to be a part of any bridge. If it must, disable the check in the script.")
+}
+
+
 #--- WAN1 DHCP script start
 :local wan1DhcpScript ":if (\$bound = 1) do={"
 :local wan1DhcpScript ($wan1DhcpScript. "\r\n  :local gwip \$\"gateway-address\";")
@@ -102,7 +110,7 @@ add distance=$wan2DefRouteDistance gateway=$wan2MonIp target-scope=11 check-gate
         :log warning ("PVZ: NO SRCNAT for interface list '" .$wanIntList. "'. Don't forget to configure your SRCNAT!")
     }
 } else={
-	:log warning ("Interface list '". $wanIntList. "' not found. Don't forget to configure your SRCNAT!")
+    :log warning ("PVZ: Interface list '". $wanIntList. "' not found. Don't forget to configure your SRCNAT!")
 }
 
 :log info "PVZ: All done!"
