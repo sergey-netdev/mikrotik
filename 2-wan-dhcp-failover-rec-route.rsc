@@ -1,19 +1,21 @@
-# !!! PREREQUISITES !!! Assuming your Mikrotik has the default configuration:
+# !!! PREREQUISITES !!! Assuming your Mikrotik has the configuration close to the default one:
+#	'WAN' interface list masqueraded, no static defaul routes, WAN interfaces enabled, etc.
+
 # [OPTIONAL] Choose your WAN1 and WAN2 interfaces, update the following variables, if needed:
 :local wan1IntName "ether1";  #WAN1 interface name
 :local wan2IntName "ether2";  #WAN2 interface name
+:local wanIntList  "WAN"
 
-# [REQUIRED] Mikrotik has "WAN" interface list by default, make sure both of your chosen WANs are added, and the default SRCNAT exists in IP -> Firewall -> NAT for the list.
-# [REQUIRED] Create DHCP clients for both interfaces manually and test if they get the gateway IPs
+# [REQUIRED] Create DHCP clients for both interfaces manually, if not yet, and test if they get the gateway IPs
 # [OPTIONAL] Enable logs by adding 'script' and 'dhcp' topics in System -> Logging
 
-# [OPTIONAL] Update the monitoring IPs. They MUST BE DIFFERENT. For example, 8.8.8.8 for WAN1 and 8.8.4.4 WAN2
+# [OPTIONAL] Update the following monitoring IPs. They MUST BE DIFFERENT. For example, 8.8.8.8 for WAN1 and 8.8.4.4 WAN2
 :local wan1MonIp "8.8.8.8"; #WAN1 monitoring IP
 :local wan2MonIp "8.8.4.4"; #WAN2 monitoring IP
 
 # [OPTIONAL] Update other parameters
-:local wan1MonRouteComment "wan1 monitoring";  #WAN1 interface monitoring route label
-:local wan2MonRouteComment "wan2 monitoring";  #WAN2 interface monitoring route label
+:local wan1MonRouteComment "wan1 monitoring";  #WAN1 interface monitoring route comment
+:local wan2MonRouteComment "wan2 monitoring";  #WAN2 interface monitoring route comment
 :local wan1DefRouteDistance 1;    #WAN1 interface default route distance (primary)
 :local wan2DefRouteDistance 4;    #WAN2 interface default route distance (secondary)
 
@@ -71,15 +73,36 @@ add dst-address=$wan2MonIp comment=$wan2MonRouteComment scope=10
     /ip dhcp-client enable $dhcpId
 }
 
-:log info ("PVZ: Removing existing default routes...")
+:log info "PVZ: Removing existing default routes..."
 /ip route remove ([/ip route find gateway=$wan1MonIp])
 /ip route remove ([/ip route find gateway=$wan2MonIp])
 
-:log info ("PVZ: Adding default recursive routes...")
+:log info "PVZ: Adding default recursive routes..."
 /ip/route/
 add distance=$wan1DefRouteDistance gateway=$wan1MonIp target-scope=11 check-gateway=ping comment=("WAN1 via ". $wan1MonIp)
 add distance=$wan2DefRouteDistance gateway=$wan2MonIp target-scope=11 check-gateway=ping comment=("WAN2 via ". $wan2MonIp)
 
-:log info "PVZ: All done!"
-:log warning "PVZ: don't forget to add the interfaces to 'WAN' interface list and check the list is added to SRCNAT."
+# check if interface list exists
+:log info ("PVZ: Checking if '". $wanIntList. "' interface list exists...")
+:if ([:len [/interface list find name=$wanIntList]] > 0) do={
 
+    :if ([:len [/interface list member find list=$wanIntList interface=$wan1IntName]] = 0) do={
+        :log info ("PVZ: Adding interface '". $wan1IntName. "' to '". $wanIntList. "' interface list.")
+        /interface list member add list=$wanIntList interface=$wan1IntName
+    }
+    :if ([:len [/interface list member find list=$wanIntList interface=$wan2IntName]] = 0) do={
+        :log info ("PVZ: Adding interface '". $wan2IntName. "' to '". $wanIntList. "' interface list.")
+        /interface list member add list=$wanIntList interface=$wan2IntName
+    }
+
+    # Check if there is at least one SRCNAT rule using this interface list
+    :if ([:len [/ip firewall nat find chain=srcnat out-interface-list=$wanIntList]] > 0) do={
+        :log info ("PVZ: There is SRCNAT for interface list '" .$wanIntList. "'. Good.")
+    } else= {
+        :log warning ("PVZ: NO SRCNAT for interface list '" .$wanIntList. "'. Don't forget to configure your SRCNAT!")
+    }
+} else={
+	:log warning ("Interface list '". $wanIntList. "' not found. Don't forget to configure your SRCNAT!")
+}
+
+:log info "PVZ: All done!"
