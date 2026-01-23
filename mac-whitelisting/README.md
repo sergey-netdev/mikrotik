@@ -2,7 +2,10 @@ This article describes how to setup MAC address restriction for Mikrotik clients
 
 # Prerequisites
 
-To not lock yourself out, create an emergency entry. This is also useful when a new support personnel doesn't have his entry, yet. In this case he would specify 00:01:02:03:04:05 MAC manually in his laptop's interface and gain access to the router.
+Make your current DHCP lease static:
+<p><img src="screenshot-lease-static.png" alt="DHCP lease edit" width="80%"/></p>
+
+To not lock yourself out in future, create an emergency entry. This is also useful when a new support personnel doesn't have his entry, yet. In this case he would specify 00:01:02:03:04:05 MAC manually in his laptop's interface and gain access to the router.
 
 Assuming your network is 192.168.88.1/24:
 ```
@@ -25,7 +28,7 @@ Modify the names, then copy-paste it into your Mikrotik's terminal:
     /ip dhcp-server set [find name=$dhcpSrvName] add-arp=yes
 }
 ```
-Once this is done, you have to whitelist any client by creating a lease *and* the ARP entry for it.
+Once this is done, you have to whitelist any client by creating a lease *and* the ARP entry for it (you can reuse the script we used to create the emergency entry above).
 
 # The flow
  1. Obtain the client MAC address (ask the device owner). Note (!), dual-interface WiFi clients have 2 separate MAC addresses! Both addresses must be whitelisted.
