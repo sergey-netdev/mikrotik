@@ -7,8 +7,8 @@ The challenge is that Mikrotik allows to specify an interface as a route gateway
 ```
 :if ($bound = 1) do={
   :local gwip $"gateway-address";
-  :local routeId [/ip route find comment~"^wan1 monitoring"];"
-  /ip route set $routeId gateway=$gwip distance=4;"
+  :local routeId [/ip route find comment~"^wan1 monitoring"];
+  /ip route set $routeId gateway=$gwip distance=4;
 }
 ```
 The script scans all routes that have a label starting with "wan1 monitoring" (in the example above) and updates the gateway IP and the distance.
