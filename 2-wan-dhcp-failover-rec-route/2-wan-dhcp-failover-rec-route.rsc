@@ -1,3 +1,6 @@
+# DO NOT copy-paste the script into Mikrotik terminal!
+# Instead, modify the params, upload it to the router and execute with `import file-name=2-wan-dhcp-failover-rec-route.rsc`
+#
 # !!! PREREQUISITES !!! Assuming your Mikrotik has the configuration close to the default one:
 #	'WAN' interface list masqueraded, no static defaul routes, WAN interfaces enabled, etc.
 
