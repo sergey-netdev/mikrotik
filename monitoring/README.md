@@ -26,7 +26,7 @@ Our device needs to periodically ping that **Push URL** for status updates. In t
 :local avg 0
 :local success 0
 :foreach r in=$result do={
-    :if ($r->"time" != nil) do={
+    :if ($r->"time" != nil  && ($r->"status") = nil) do={
         :set avg ($avg + ($r->"time"))
         :set success ($success + 1)
     }
@@ -72,7 +72,7 @@ Our device needs to periodically ping that **Push URL** for status updates. In t
 :local avg 0
 :local success 0
 :foreach r in=$result do={
-    :if ($r->"time" != nil) do={
+    :if ($r->"time" != nil  && ($r->"status") = nil) do={
         :set avg ($avg + ($r->"time"))
         :set success ($success + 1)
     }
