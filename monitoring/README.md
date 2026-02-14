@@ -27,13 +27,13 @@ Our device needs to periodically ping that **Push URL** for status updates. In t
 :local success 0
 :foreach r in=$result do={
     :if ($r->"time" != nil  && ($r->"status") = nil) do={
+        :put  ($r->"time")
         :set avg ($avg + ($r->"time"))
         :set success ($success + 1)
     }
 }
-:put $result
-:put "Successful attempts: $success / $count";
 
+:put "Successful attempts: $success / $count";
 :if ($success > 0) do={
     :set avg ($avg / $success)
     :put "Average successful time: $avg";
@@ -73,13 +73,13 @@ Our device needs to periodically ping that **Push URL** for status updates. In t
 :local success 0
 :foreach r in=$result do={
     :if ($r->"time" != nil  && ($r->"status") = nil) do={
+        :put  ($r->"time")
         :set avg ($avg + ($r->"time"))
         :set success ($success + 1)
     }
 }
-:put $result
-:put "Successful attempts: $success / $count";
 
+:put "Successful attempts: $success / $count";
 :if ($success > 0) do={
     :set avg ($avg / $success)
     :put "Average successful time: $avg";
