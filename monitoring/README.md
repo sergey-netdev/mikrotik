@@ -11,23 +11,99 @@ First we need to create a push monitor in Uptime Kuma via its web interface:
 Our device needs to periodically ping that **Push URL** for status updates. In this example, we create 2 named scripts, `kuma-wan1-heartbeat` and `kuma-wan2-heartbeat`:
 
 ```
-/system script add name=kuma-wan1-heartbeat dont-require-permissions=yes source= {
-:local r [/ping 8.8.8.8 count=3 interface=ether1];
-:if ($r > 0) do={
-    /tool fetch url="http://10.8.0.1:3001/api/push/<APIKEY>?status=up&msg=OK" output=none;
-} else={
-    /tool fetch url="http://10.8.0.1:3001/api/push/<APIKEY>?status=down&msg=FAIL" output=none;
-}
-}
+/system script add name=kuma-wan1-heartbeat dont-require-permissions=yes source= {{
+:local host "8.8.8.8"
+:local intf "ether1"
+:local count "5"
+:local pushUrl "http://10.8.0.1:3001/api/push/<APIKEY>"
+:local result
 
-/system script add name=kuma-wan2-heartbeat dont-require-permissions=yes source= {
-:local r [/ping 8.8.4.4 count=3 interface=ether2 ];
-:if ($r > 0) do={
-    /tool fetch url="http://10.8.0.1:3001/api/push/<APIKEY>?status=up&msg=OK" output=none;
+:if ([:len $intf] > 0) do={
+    :set result [/ping $host interface=$intf count=$count as-value]
 } else={
-    /tool fetch url="http://10.8.0.1:3001/api/push/<APIKEY>?status=down&msg=FAIL" output=none;
+    :set result [/ping $host count=$count as-value]
 }
+:local avg 0
+:local success 0
+:foreach r in=$result do={
+    :if ($r->"time" != nil) do={
+        :set avg ($avg + ($r->"time"))
+        :set success ($success + 1)
+    }
 }
+:put $result
+:put "Successful attempts: $success / $count";
+:put "Average successful time: $avg";
+
+:if ($success > 0) do={
+    :set avg ($avg / $success)
+    
+    :local t [:tostr $avg]; # "00:02:01.123456"
+
+    # split into hours, minutes, seconds+frac
+    :local h [:tonum [:pick $t 0 2]]; #"00"
+    :local m [:tonum [:pick $t 3 5]]; #"02"
+    :local sfrac [:pick $t 6 [:len $t]]; #"01.123456"
+
+    # split seconds and fractional part
+    :local sec [:tonum [:pick $sfrac 0 2]]   ; #"01"  1
+    :local frac [:pick $sfrac 3 [:len $sfrac]]  ; #"123456"
+
+    # calculate total ms
+    :local ms (($h*3600 + $m*60 + $sec) * 1000 + [:tonum [:pick $frac 0 3]]); # ((02 * 60) + 1) *1000) + 123 -> "121123"
+
+    /tool fetch url=("$pushUrl?status=up&msg=OK&ping=$ms") output=none;
+} else={
+    /tool fetch url=("$pushUrl?status=down&msg=FAIL") output=none;
+}
+}}
+
+/system script add name=kuma-wan2-heartbeat dont-require-permissions=yes source= {{
+:local host "8.8.4.4"
+:local intf "ether2"
+:local count "5"
+:local pushUrl "http://10.8.0.1:3001/api/push/<APIKEY>"
+:local result
+
+:if ([:len $intf] > 0) do={
+    :set result [/ping $host interface=$intf count=$count as-value]
+} else={
+    :set result [/ping $host count=$count as-value]
+}
+:local avg 0
+:local success 0
+:foreach r in=$result do={
+    :if ($r->"time" != nil) do={
+        :set avg ($avg + ($r->"time"))
+        :set success ($success + 1)
+    }
+}
+:put $result
+:put "Successful attempts: $success / $count";
+:put "Average successful time: $avg";
+
+:if ($success > 0) do={
+    :set avg ($avg / $success)
+    
+    :local t [:tostr $avg]; # "00:02:01.123456"
+
+    # split into hours, minutes, seconds+frac
+    :local h [:tonum [:pick $t 0 2]]; #"00"
+    :local m [:tonum [:pick $t 3 5]]; #"02"
+    :local sfrac [:pick $t 6 [:len $t]]; #"01.123456"
+
+    # split seconds and fractional part
+    :local sec [:tonum [:pick $sfrac 0 2]]   ; #"01"  1
+    :local frac [:pick $sfrac 3 [:len $sfrac]]  ; #"123456"
+
+    # calculate total ms
+    :local ms (($h*3600 + $m*60 + $sec) * 1000 + [:tonum [:pick $frac 0 3]]); # ((02 * 60) + 1) *1000) + 123 -> "121123"
+
+    /tool fetch url=("$pushUrl?status=up&msg=OK&ping=$ms") output=none;
+} else={
+    /tool fetch url=("$pushUrl?status=down&msg=FAIL") output=none;
+}
+}}
 ```
 
 Here we ping 8.8.8.8 via `ether1` WAN interface and 8.8.4.4 via `ether2` and then report the result to the URL.
@@ -35,9 +111,9 @@ Now we need to add two Netwatch rules, `WAN1-mon` and `WAN2-mon` to our Mikrotik
 
 ```
 /tool netwatch
-add disabled=no down-script="" host=8.8.8.8 interval=1m name=WAN1-mon \
+add disabled=no host=8.8.8.8 interval=1m name=WAN1-mon \
     test-script=kuma-wan1-heartbeat type=simple up-script=""
-add disabled=no down-script="" host=8.8.4.4 interval=1m name=WAN2-mon \
+add disabled=no host=8.8.4.4 interval=1m name=WAN2-mon \
     test-script=kuma-wan2-heartbeat type=simple up-script=""
 ```
 
