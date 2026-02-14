@@ -33,11 +33,10 @@ Our device needs to periodically ping that **Push URL** for status updates. In t
 }
 :put $result
 :put "Successful attempts: $success / $count";
-:put "Average successful time: $avg";
 
 :if ($success > 0) do={
     :set avg ($avg / $success)
-    
+    :put "Average successful time: $avg";
     :local t [:tostr $avg]; # "00:02:01.123456"
 
     # split into hours, minutes, seconds+frac
@@ -80,11 +79,10 @@ Our device needs to periodically ping that **Push URL** for status updates. In t
 }
 :put $result
 :put "Successful attempts: $success / $count";
-:put "Average successful time: $avg";
 
 :if ($success > 0) do={
     :set avg ($avg / $success)
-    
+    :put "Average successful time: $avg";
     :local t [:tostr $avg]; # "00:02:01.123456"
 
     # split into hours, minutes, seconds+frac
